@@ -2,6 +2,8 @@ import collections
 import csv
 import json
 import time
+import sys
+from threading import Thread
 
 import requests as requests
 from flask import Flask
@@ -9,8 +11,14 @@ from flask import send_from_directory
 
 app = Flask(__name__)
 leaders = {}
-last_updated = 0
 
+remaining_hits = 5000
+hits_reset = 0
+hits_per_update = 1
+
+headers = {
+   "Authorization": "Bearer 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"
+}
 
 def update_leaders():
     ret = collections.defaultdict(lambda: 0)
@@ -18,17 +26,17 @@ def update_leaders():
         reader = csv.reader(csvfile)
         reader.__next__()
         for user, repo in reader:
-            # resp = requests.get(f"https://api.github.com/repos/{user}/{repo}/pulls?state=all&per_page=100").json()
             resp = []
             page = 1
-            t_resp = requests.get(f"https://api.github.com/repos/{user}/{repo}/pulls?state=all&per_page=100&page={page}").json()
+            f_resp = requests.get(f"https://api.github.com/repos/{user}/{repo}/pulls?state=all&per_page=100&page={page}", headers=headers)
+            t_resp = f_resp.json()
             while len(t_resp) > 0:
                 resp.extend(t_resp)
                 if len(t_resp) < 90:
                     break  # smol optimisation to reduce our number of calls
                 page += 1
-                t_resp = requests.get(
-                    f"https://api.github.com/repos/{user}/{repo}/pulls?state=all&per_page=100&page={page}").json()
+                f_resp = requests.get(f"https://api.github.com/repos/{user}/{repo}/pulls?state=all&per_page=100&page={page}", headers=headers)
+                t_resp = f_resp.json()
             try:
                 x = resp
                 for pull in resp:
@@ -39,32 +47,39 @@ def update_leaders():
                 print(f"ERROR AT: {user}, {repo}")
                 print(resp)
                 return 'ded'
-    global leaders
-    print(ret)
-    print('')
+    global leaders, remaining_hits, hits_reset, hits_per_update
     leaders = {k: v for k, v in sorted(ret.items(), key=lambda item: -item[1])}
 
+    initial_remaining_hits = remaining_hits
+    remaining_hits = int(f_resp.headers['X-RateLimit-Remaining'])
+    hits_reset = int(f_resp.headers['X-RateLimit-Reset'])
+    hits_per_update = initial_remaining_hits - remaining_hits
 
-# @app.route('/')
-# def hello_world():  # put application's code here
-#     return send_from_directory('public', 'index.html')
+class UpdaterThread(Thread):
+    def run(self):
+        global last_updated, leaders, remaining_hits, hits_reset, hits_per_update
+        update_leaders()
 
+        while True:
+            update_leaders()
+
+            number_updates = remaining_hits/hits_per_update
+            update_interval = (hits_reset - time.time()) / number_updates
+
+            print(f"remaining_hits: {remaining_hits}")
+            print(f"hits_per_update: {hits_per_update}")
+            print(f"update_interval: {update_interval}")
+
+            sys.stdout.flush()
+
+            time.sleep(max(update_interval, 30))
 
 @app.route('/leaderboard')
 def leaderboard():
-    curr_time = time.time()
-    global last_updated
-    if curr_time - last_updated > 3600:
-        last_updated = curr_time
-        update_leaders()
     return json.dumps(leaders)
 
 
-# @app.route('/<path:path>')
-# def send_report(path):
-#     return send_from_directory('public', path)
-
-
 if __name__ == '__main__':
+    UpdaterThread().start()
     app.run(host='0.0.0.0', port=5000, debug=False)
 
