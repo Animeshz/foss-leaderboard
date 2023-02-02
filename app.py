@@ -3,13 +3,17 @@ import csv
 import json
 import time
 import sys
+import os
 from threading import Thread
 
 import requests as requests
 from flask import Flask
 from flask import send_from_directory
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
+
 leaders = {}
 
 remaining_hits = 5000
@@ -17,7 +21,7 @@ hits_reset = 0
 hits_per_update = 1
 
 headers = {
-   "Authorization": "Bearer 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"
+   "Authorization": "Bearer " + os.environ["GH_TOKEN"]
 }
 
 def update_leaders():
@@ -58,7 +62,6 @@ def update_leaders():
 class UpdaterThread(Thread):
     def run(self):
         global last_updated, leaders, remaining_hits, hits_reset, hits_per_update
-        update_leaders()
 
         while True:
             update_leaders()
