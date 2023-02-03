@@ -43,11 +43,10 @@ def update_leaders():
                     f_resp = requests.get(f"https://api.github.com/repos/{user}/{repo}/pulls?state=all&per_page=100&page={page}", timeout=10.0, headers=headers)
                     t_resp = f_resp.json()
 
-                    x = resp
-                    for pull in resp:
-                        if any('accepted-' in label['name'] for label in pull['labels']):
-                            valid_pull = next(label['name'] for label in pull['labels'] if 'accepted-' in label['name'])
-                            ret[pull['user']['login']] += int(valid_pull.split('-')[-1])
+                for pull in resp:
+                    if any('accepted-' in label['name'] for label in pull['labels']):
+                        valid_pull = next(label['name'] for label in pull['labels'] if 'accepted-' in label['name'])
+                        ret[pull['user']['login']] += int(valid_pull.split('-')[-1])
             except Exception:
                 print(f"ERROR AT: {user}, {repo}")
                 print(resp)
