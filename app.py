@@ -32,21 +32,22 @@ def update_leaders():
         for user, repo in reader:
             resp = []
             page = 1
-            f_resp = requests.get(f"https://api.github.com/repos/{user}/{repo}/pulls?state=all&per_page=100&page={page}", headers=headers)
-            t_resp = f_resp.json()
-            while len(t_resp) > 0:
-                resp.extend(t_resp)
-                if len(t_resp) < 90:
-                    break  # smol optimisation to reduce our number of calls
-                page += 1
-                f_resp = requests.get(f"https://api.github.com/repos/{user}/{repo}/pulls?state=all&per_page=100&page={page}", headers=headers)
-                t_resp = f_resp.json()
             try:
-                x = resp
-                for pull in resp:
-                    if any('accepted-' in label['name'] for label in pull['labels']):
-                        valid_pull = next(label['name'] for label in pull['labels'] if 'accepted-' in label['name'])
-                        ret[pull['user']['login']] += int(valid_pull.split('-')[-1])
+                f_resp = requests.get(f"https://api.github.com/repos/{user}/{repo}/pulls?state=all&per_page=100&page={page}", timeout=10.0, headers=headers)
+                t_resp = f_resp.json()
+                while len(t_resp) > 0:
+                    resp.extend(t_resp)
+                    if len(t_resp) < 90:
+                        break  # smol optimisation to reduce our number of calls
+                    page += 1
+                    f_resp = requests.get(f"https://api.github.com/repos/{user}/{repo}/pulls?state=all&per_page=100&page={page}", timeout=10.0, headers=headers)
+                    t_resp = f_resp.json()
+
+                    x = resp
+                    for pull in resp:
+                        if any('accepted-' in label['name'] for label in pull['labels']):
+                            valid_pull = next(label['name'] for label in pull['labels'] if 'accepted-' in label['name'])
+                            ret[pull['user']['login']] += int(valid_pull.split('-')[-1])
             except Exception:
                 print(f"ERROR AT: {user}, {repo}")
                 print(resp)
