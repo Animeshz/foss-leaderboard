@@ -50,6 +50,7 @@ def update_leaders():
             except Exception:
                 print(f"ERROR AT: {user}, {repo}")
                 print(resp)
+                print(user, repo)
                 return 'ded'
     global leaders, remaining_hits, hits_reset, hits_per_update
     leaders = {k: v for k, v in sorted(ret.items(), key=lambda item: -item[1])}
@@ -80,6 +81,14 @@ class UpdaterThread(Thread):
 @app.route('/leaderboard')
 def leaderboard():
     return json.dumps(leaders)
+
+@app.route('/<path:path>')
+def send_files(path):
+    return send_from_directory('.', path)
+
+@app.route('/')
+def root():
+    return send_from_directory('.', 'index.html')
 
 
 if __name__ == '__main__':
