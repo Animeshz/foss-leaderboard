@@ -16,7 +16,7 @@ CORS(app)
 
 leaders = {}
 
-remaining_hits = 5000
+remaining_hits = 0
 hits_reset = 0
 hits_per_update = 1
 
@@ -69,7 +69,7 @@ class UpdaterThread(Thread):
             update_leaders()
 
             number_updates = remaining_hits/hits_per_update
-            update_interval = (hits_reset - time.time()) / number_updates
+            update_interval = 30 if hits_per_update < 0 else ((hits_reset - time.time()) / number_updates)
 
             print(f"remaining_hits: {remaining_hits}")
             print(f"hits_per_update: {hits_per_update}")
