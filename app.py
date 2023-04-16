@@ -16,7 +16,7 @@ CORS(app)
 
 leaders = {}
 
-remaining_hits = 0
+remaining_hits = 1000
 hits_reset = 0
 hits_per_update = 1
 
@@ -44,9 +44,9 @@ def update_leaders():
                     t_resp = f_resp.json()
 
                 for pull in resp:
-                    if any('accepted-' in label['name'] for label in pull['labels']):
-                        valid_pull = next(label['name'] for label in pull['labels'] if 'accepted-' in label['name'])
-                        ret[pull['user']['login']] += int(valid_pull.split('-')[-1])
+                    if any('points' in label['name'] for label in pull['labels']):
+                        valid_pulls = [label['name'] for label in pull['labels'] if 'points - ' in label['name']]
+                        ret[pull['user']['login']] += sum(map(lambda x: int(x.split(' - ')[-1]), valid_pulls))
             except Exception:
                 print(f"ERROR AT: {user}, {repo}")
                 print(resp)
